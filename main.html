@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Investment Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16233B;
+    --ink-soft:#3B4A63;
+    --paper:#EEF1EE;
+    --paper-card:#FBFCFA;
+    --line:#D8DCD4;
+    --muted:#7A8578;
+    --gold:#A9812F;
+    --gold-soft:#F1E7CE;
+    --positive:#1F6F5C;
+    --positive-bg:#E3F0EC;
+    --negative:#9C4331;
+    --negative-bg:#F5E7E2;
+    --radius:10px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px 80px;}
+
+  /* Header */
+  .masthead{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:16px;margin-bottom:24px;
+    flex-wrap:wrap;gap:12px;
+  }
+  .masthead h1{
+    font-family:'Source Serif 4',serif;
+    font-weight:700;
+    font-size:34px;
+    letter-spacing:-0.01em;
+  }
+  .masthead .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.14em;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .today-stamp{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    padding:6px 12px;
+    border-radius:6px;
+  }
+
+  /* Status / setup */
+  .status-bar{
+    display:flex;align-items:center;gap:10px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    padding:10px 14px;
+    border-radius:8px;
+    background:var(--negative-bg);
+    color:var(--negative);
+    border:1px solid #e4c6bc;
+    margin-bottom:14px;
+  }
+  .status-bar.connected{
+    background:var(--positive-bg);
+    color:var(--positive);
+    border-color:#bcdbd1;
+  }
+  .status-bar .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;}
+  .status-bar button{
+    margin-left:auto;
+    background:none;border:1px solid currentColor;color:inherit;
+    font-family:inherit;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;
+  }
+
+  .setup-box{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-left:3px solid var(--gold);
+    padding:16px;border-radius:var(--radius);
+    margin-bottom:20px;
+  }
+  .setup-box h2{font-size:13px;font-weight:600;margin-bottom:4px;}
+  .setup-box p{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;}
+  .setup-box .row{display:flex;gap:8px;flex-wrap:wrap;}
+  .setup-box input[type=text]{flex:1;min-width:220px;}
+
+  input, select{
+    padding:9px 11px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:13px;
+    font-family:'Inter',sans-serif;
+    background:#fff;
+    color:var(--ink);
+  }
+  input:focus, select:focus{outline:2px solid var(--gold);outline-offset:1px;}
+
+  button{
+    border:none;border-radius:6px;cursor:pointer;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+    padding:9px 16px;
+  }
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover{background:var(--ink-soft);}
+  .btn-primary:disabled{opacity:0.5;cursor:default;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink-soft);}
+  .btn-ghost:hover{background:var(--paper);}
+  .btn-gold{background:var(--gold);color:#fff;}
+  .btn-gold:hover{background:#8d6c25;}
+  .btn-text-danger{background:none;color:var(--negative);border:1px solid transparent;padding:6px 8px;font-size:12px;}
+  .btn-text-danger:hover{text-decoration:underline;}
+  .btn-small{padding:6px 11px;font-size:12px;background:#fff;border:1px solid var(--line);color:var(--ink-soft);}
+  .btn-small:hover{background:var(--paper);}
+
+  /* Summary */
+  .summary{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:12px;margin-bottom:28px;
+  }
+  .card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .card-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;text-transform:uppercase;letter-spacing:0.09em;
+    color:var(--muted);margin-bottom:8px;
+  }
+  .card-value{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:22px;font-weight:600;
+  }
+  .positive{color:var(--positive);}
+  .negative{color:var(--negative);}
+
+  /* Layout */
+  .board{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;}
+  @media (max-width:820px){.board{grid-template-columns:1fr;}}
+
+  section.panel{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    margin-bottom:20px;
+    overflow:hidden;
+  }
+  .panel-head{
+    padding:14px 18px;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:wrap;gap:8px;
+  }
+  .panel-head h2{
+    font-family:'Source Serif 4',serif;font-size:17px;font-weight:600;
+  }
+  .panel-head .count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .panel-body{padding:18px;}
+
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px;}
+  .field-label{font-size:11px;color:var(--muted);margin-bottom:4px;display:block;font-family:'IBM Plex Mono',monospace;}
+  .button-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .loading-text{font-size:12px;color:var(--gold);font-family:'IBM Plex Mono',monospace;}
+
+  /* Investment list */
+  .investment-item{
+    padding:14px 18px;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .investment-item:last-child{border-bottom:none;}
+  .investment-name{font-weight:600;font-size:14.5px;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+  .recur-badge{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    background:var(--gold-soft);color:var(--gold);
+    padding:2px 7px;border-radius:20px;border:1px solid #e3d3a0;
+  }
+  .investment-details{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);
+    display:flex;gap:16px;flex-wrap:wrap;
+  }
+  .investment-actions{display:flex;gap:6px;}
+
+  .empty{text-align:center;color:var(--muted);padding:36px 20px;font-size:13px;}
+
+  /* Sidebar: upcoming */
+  .upcoming-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:12px 18px;border-bottom:1px solid var(--line);gap:10px;
+  }
+  .upcoming-item:last-child{border-bottom:none;}
+  .upcoming-when{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+    min-width:64px;
+  }
+  .upcoming-when.due-now{color:var(--negative);font-weight:600;}
+  .upcoming-name{font-size:13px;font-weight:500;}
+  .upcoming-amt{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--ink-soft);}
+  .upcoming-freq{font-size:10.5px;color:var(--muted);text-transform:capitalize;}
+
+  .schedule-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 18px;border-bottom:1px solid var(--line);gap:8px;flex-wrap:wrap;
+  }
+  .schedule-row:last-child{border-bottom:none;}
+  .schedule-row.paused{opacity:0.5;}
+  .schedule-meta{font-size:12.5px;}
+  .schedule-meta .m{font-family:'IBM Plex Mono',monospace;color:var(--muted);font-size:11px;}
+
+  .history-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .history-table th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);
+    padding:8px 18px;border-bottom:1px solid var(--line);
+  }
+  .history-table td{padding:8px 18px;border-bottom:1px solid var(--line);font-family:'IBM Plex Mono',monospace;}
+  .history-table tr:last-child td{border-bottom:none;}
+  .tag{font-size:10px;padding:2px 6px;border-radius:4px;font-family:'Inter',sans-serif;font-weight:600;}
+  .tag.recurring{background:var(--gold-soft);color:var(--gold);}
+  .tag.manual{background:#e7e9e4;color:var(--ink-soft);}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:11px 20px;border-radius:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.2);
+    opacity:0;pointer-events:none;transition:opacity 0.25s, transform 0.25s;
+    z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  .footer-reset{text-align:center;margin-top:10px;}
+  .footer-reset button{font-size:11px;color:var(--muted);background:none;border:none;text-decoration:underline;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <div class="eyebrow">Portfolio Ledger</div>
+      <h1>Investment Tracker</h1>
+    </div>
+    <div class="today-stamp" id="todayStamp"></div>
+  </div>
+
+  <div class="status-bar" id="status">
+    <span class="dot"></span><span id="statusText">Checking connection…</span>
+    <button id="statusBtn" onclick="toggleSetup()">Edit</button>
+  </div>
+
+  <div class="setup-box" id="setupBox" style="display:none;">
+    <h2>Connect your Google Sheet</h2>
+    <p>Paste your Google Apps Script Web App URL. Every manual entry and every processed recurring payment will be pushed to it.</p>
+    <div class="row">
+      <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/…/exec">
+      <button class="btn-primary" onclick="saveScriptUrl()">Save</button>
+      <button class="btn-ghost" onclick="toggleSetup()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="summary" id="summaryCards">
+    <div class="card"><div class="card-label">Total Invested</div><div class="card-value" id="totalInvested">$0</div></div>
+    <div class="card"><div class="card-label">Current Value</div><div class="card-value" id="totalValue">$0</div></div>
+    <div class="card"><div class="card-label">Gain / Loss</div><div class="card-value" id="totalGain">$0</div></div>
+    <div class="card"><div class="card-label">Return</div><div class="card-value" id="returnPercent">0%</div></div>
+    <div class="card"><div class="card-label">Monthly Recurring</div><div class="card-value" id="monthlyRecurring">$0</div></div>
+  </div>
+
+  <div class="board">
+    <!-- MAIN COLUMN -->
+    <div>
+      <section class="panel">
+        <div class="panel-head"><h2 id="formTitle">Add Investment</h2></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div><span class="field-label">Name</span><input type="text" id="investmentName" placeholder="e.g., S&amp;P 500 ETF"></div>
+            <div><span class="field-label">Amount Invested</span><input type="number" id="amountInvested" placeholder="0.00" step="0.01"></div>
+            <div><span class="field-label">Current Value</span><input type="number" id="currentValue" placeholder="0.00" step="0.01"></div>
+          </div>
+          <div class="button-row">
+            <button class="btn-primary" id="addBtn" onclick="addInvestment()">Add Investment</button>
+            <button class="btn-ghost" id="cancelBtn" onclick="cancelEdit()" style="display:none;">Cancel</button>
+            <span class="loading-text" id="loadingText" style="display:none;">Saving…</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Holdings</h2>
+          <span class="count" id="investmentCount">(0)</span>
+        </div>
+        <div id="investmentList"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Payment History</h2></div>
+        <div id="historyWrap"></div>
+      </section>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div>
+      <section class="panel">
+        <div class="panel-head"><h2>Upcoming</h2></div>
+        <div id="upcomingList"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Recurring Contributions</h2></div>
+        <div class="panel-body" style="padding-bottom:8px;">
+          <div class="form-grid" style="grid-template-columns:1fr;">
+            <div>
+              <span class="field-label">Investment</span>
+              <select id="recurInvestment"></select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div><span class="field-label">Amount</span><input type="number" id="recurAmount" placeholder="0.00" step="0.01"></div>
+            <div>
+              <span class="field-label">Frequency</span>
+              <select id="recurFrequency">
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Biweekly</option>
+                <option value="monthly" selected>Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div><span class="field-label">Starts</span><input type="date" id="recurStart"></div>
+          </div>
+          <div class="button-row" style="margin-bottom:6px;">
+            <button class="btn-gold" onclick="addSchedule()">Schedule It</button>
+          </div>
+        </div>
+        <div id="scheduleList"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="footer-reset"><button onclick="resetAllData()">Clear all local data</button></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let investments = [];
+let schedules = [];
+let history = [];
+let scriptUrl = '';
+let editingId = null;
+const DATA_KEY = 'tracker-data';
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+document.getElementById('todayStamp').textContent = new Date().toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+/* ---------- Storage ---------- */
+async function loadData(){
+  try{
+    const res = await window.storage.get(DATA_KEY, false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      investments = parsed.investments || [];
+      schedules = parsed.schedules || [];
+      history = parsed.history || [];
+      scriptUrl = parsed.scriptUrl || '';
+    }
+  }catch(e){
+    // no data saved yet
+    investments = []; schedules = []; history = []; scriptUrl = '';
+  }
+}
+
+async function saveData(){
+  try{
+    const payload = JSON.stringify({investments, schedules, history, scriptUrl});
+    const result = await window.storage.set(DATA_KEY, payload, false);
+    if(!result) console.error('Storage set returned null');
+  }catch(e){
+    console.error('Storage error', e);
+    showToast('Could not save locally — try again');
+  }
+}
+
+async function resetAllData(){
+  if(!confirm('Clear all investments, schedules and history stored in this app? This cannot be undone.')) return;
+  investments = []; schedules = []; history = [];
+  await saveData();
+  render();
+  showToast('Local data cleared');
+}
+
+/* ---------- Google Sheets ---------- */
+function updateStatusUI(){
+  const bar = document.getElementById('status');
+  const text = document.getElementById('statusText');
+  if(scriptUrl){
+    bar.classList.add('connected');
+    text.textContent = 'Connected to Google Sheets';
+  }else{
+    bar.classList.remove('connected');
+    text.textContent = 'Not connected — entries save locally only';
+  }
+}
+
+function toggleSetup(){
+  const box = document.getElementById('setupBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('scriptUrlInput').value = scriptUrl;
+}
+
+async function saveScriptUrl(){
+  const url = document.getElementById('scriptUrlInput').value.trim();
+  if(!url){ alert('Please paste a valid URL'); return; }
+  scriptUrl = url;
+  await saveData();
+  document.getElementById('setupBox').style.display = 'none';
+  updateStatusUI();
+  showToast('Google Sheet connected');
+}
+
+async function sendToGoogleSheets(record){
+  if(!scriptUrl) return true; // no-op if not connected, local save still succeeds
+  try{
+    const response = await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify(record)
+    });
+    const result = await response.json();
+    if(!result.success){
+      showToast('Sheet sync error: ' + (result.error || 'unknown'));
+      return false;
+    }
+    return true;
+  }catch(err){
+    console.error(err);
+    showToast('Could not reach Google Sheet — saved locally only');
+    return false;
+  }
+}
+
+/* ---------- Recurring schedule math ---------- */
+function nextDate(dateStr, frequency){
+  const d = new Date(dateStr + 'T00:00:00');
+  switch(frequency){
+    case 'weekly': d.setDate(d.getDate()+7); break;
+    case 'biweekly': d.setDate(d.getDate()+14); break;
+    case 'monthly': d.setMonth(d.getMonth()+1); break;
+    case 'quarterly': d.setMonth(d.getMonth()+3); break;
+    case 'yearly': d.setFullYear(d.getFullYear()+1); break;
+  }
+  return d.toISOString().slice(0,10);
+}
+
+function monthlyEquivalent(amount, frequency){
+  switch(frequency){
+    case 'weekly': return amount * 4.345;
+    case 'biweekly': return amount * 2.1725;
+    case 'monthly': return amount;
+    case 'quarterly': return amount / 3;
+    case 'yearly': return amount / 12;
+  }
+  return 0;
+}
+
+function freqLabel(f){
+  return {weekly:'Weekly',biweekly:'Biweekly',monthly:'Monthly',quarterly:'Quarterly',yearly:'Yearly'}[f] || f;
+}
+
+// Applies any schedules whose nextDue date has passed, catching up on missed periods (capped)
+async function processDueSchedules(){
+  const today = todayISO();
+  let processedCount = 0;
+  let totalApplied = 0;
+
+  for(const s of schedules){
+    if(!s.active) continue;
+    let guard = 0;
+    while(s.nextDue <= today && guard < 24){
+      const inv = investments.find(i => i.id === s.investmentId);
+      if(!inv) break;
+      inv.amountInvested += s.amount;
+      inv.currentValue += s.amount;
+
+      const entry = {
+        id: Date.now() + Math.random(),
+        investmentId: s.investmentId,
+        scheduleId: s.id,
+        amount: s.amount,
+        date: s.nextDue,
+        type: 'recurring'
+      };
+      history.unshift(entry);
+      processedCount++;
+      totalApplied += s.amount;
+
+      sendToGoogleSheets({
+        name: inv.name,
+        amountInvested: inv.amountInvested,
+        currentValue: inv.currentValue,
+        contributionAmount: s.amount,
+        date: s.nextDue,
+        source: 'recurring'
+      });
+
+      s.nextDue = nextDate(s.nextDue, s.frequency);
+      guard++;
+    }
+  }
+
+  if(processedCount > 0){
+    await saveData();
+    showToast(`Processed ${processedCount} recurring payment${processedCount>1?'s':''} totaling $${Math.round(totalApplied).toLocaleString()}`);
+  }
+}
+
+/* ---------- Investments ---------- */
+async function addInvestment(){
+  const name = document.getElementById('investmentName').value.trim();
+  const amount = parseFloat(document.getElementById('amountInvested').value);
+  const value = parseFloat(document.getElementById('currentValue').value);
+
+  if(!name || isNaN(amount) || isNaN(value)){
+    alert('Please fill in all fields');
+    return;
+  }
+
+  const btn = document.getElementById('addBtn');
+  const loading = document.getElementById('loadingText');
+  btn.disabled = true;
+  loading.style.display = 'inline';
+
+  const record = { id: editingId || (Date.now()+Math.random()), name, amountInvested: amount, currentValue: value };
+
+  await sendToGoogleSheets({ name, amountInvested: amount, currentValue: value, source: 'manual' });
+
+  if(editingId){
+    investments = investments.map(inv => inv.id === editingId ? record : inv);
+    editingId = null;
+  }else{
+    investments.push(record);
+    history.unshift({ id: Date.now()+Math.random(), investmentId: record.id, amount, date: todayISO(), type: 'manual' });
+  }
+
+  await saveData();
+
+  document.getElementById('investmentName').value = '';
+  document.getElementById('amountInvested').value = '';
+  document.getElementById('currentValue').value = '';
+  document.getElementById('formTitle').textContent = 'Add Investment';
+  document.getElementById('cancelBtn').style.display = 'none';
+  document.getElementById('addBtn').textContent = 'Add Investment';
+
+  btn.disabled = false;
+  loading.style.display = 'none';
+  render();
+}
+
+function editInvestment(id){
+  const inv = investments.find(i => i.id === id);
+  if(!inv) return;
+  document.getElementById('investmentName').value = inv.name;
+  document.getElementById('amountInvested').value = inv.amountInvested;
+  document.getElementById('currentValue').value = inv.currentValue;
+  document.getElementById('formTitle').textContent = 'Edit Investment';
+  document.getElementById('addBtn').textContent = 'Update';
+  document.getElementById('cancelBtn').style.display = 'inline-block';
+  editingId = id;
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelEdit(){
+  document.getElementById('investmentName').value = '';
+  document.getElementById('amountInvested').value = '';
+  document.getElementById('currentValue').value = '';
+  document.getElementById('formTitle').textContent = 'Add Investment';
+  document.getElementById('addBtn').textContent = 'Add Investment';
+  document.getElementById('cancelBtn').style.display = 'none';
+  editingId = null;
+}
+
+async function deleteInvestment(id){
+  if(!confirm('Delete this investment? Any recurring schedules tied to it will also be removed.')) return;
+  investments = investments.filter(inv => inv.id !== id);
+  schedules = schedules.filter(s => s.investmentId !== id);
+  await saveData();
+  render();
+}
+
+/* ---------- Recurring schedules ---------- */
+async function addSchedule(){
+  const investmentId = document.getElementById('recurInvestment').value;
+  const amount = parseFloat(document.getElementById('recurAmount').value);
+  const frequency = document.getElementById('recurFrequency').value;
+  const start = document.getElementById('recurStart').value || todayISO();
+
+  if(!investmentId){ alert('Add an investment first, then schedule contributions to it.'); return; }
+  if(isNaN(amount) || amount <= 0){ alert('Enter a contribution amount'); return; }
+
+  schedules.push({
+    id: Date.now()+Math.random(),
+    investmentId: isNaN(Number(investmentId)) ? investmentId : Number(investmentId),
+    amount, frequency, nextDue: start, active: true
+  });
+
+  document.getElementById('recurAmount').value = '';
+  document.getElementById('recurStart').value = '';
+
+  await saveData();
+  await processDueSchedules();
+  render();
+}
+
+async function toggleSchedule(id){
+  const s = schedules.find(x => x.id === id);
+  if(s) s.active = !s.active;
+  await saveData();
+  render();
+}
+
+async function deleteSchedule(id){
+  if(!confirm('Remove this recurring schedule?')) return;
+  schedules = schedules.filter(s => s.id !== id);
+  await saveData();
+  render();
+}
+
+/* ---------- Render ---------- */
+function render(){
+  updateStatusUI();
+
+  const totalInvested = investments.reduce((s,i)=>s+i.amountInvested,0);
+  const totalValue = investments.reduce((s,i)=>s+i.currentValue,0);
+  const totalGain = totalValue - totalInvested;
+  const returnPct = totalInvested > 0 ? (totalGain/totalInvested)*100 : 0;
+  const monthlyRecurring = schedules.filter(s=>s.active).reduce((s,sc)=>s+monthlyEquivalent(sc.amount, sc.frequency),0);
+
+  document.getElementById('totalInvested').textContent = '$'+Math.round(totalInvested).toLocaleString();
+  document.getElementById('totalValue').textContent = '$'+Math.round(totalValue).toLocaleString();
+  const gainEl = document.getElementById('totalGain');
+  gainEl.textContent = (totalGain>=0?'+':'') + '$'+Math.round(totalGain).toLocaleString();
+  gainEl.className = 'card-value ' + (totalGain>=0?'positive':'negative');
+  const retEl = document.getElementById('returnPercent');
+  retEl.textContent = returnPct.toFixed(1)+'%';
+  retEl.className = 'card-value ' + (returnPct>=0?'positive':'negative');
+  document.getElementById('monthlyRecurring').textContent = '$'+Math.round(monthlyRecurring).toLocaleString();
+
+  document.getElementById('investmentCount').textContent = `(${investments.length})`;
+
+  // investment select for scheduling
+  const sel = document.getElementById('recurInvestment');
+  const prevVal = sel.value;
+  sel.innerHTML = investments.length
+    ? investments.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')
+    : '<option value="">Add an investment first</option>';
+  if(prevVal) sel.value = prevVal;
+
+  // investments list
+  const list = document.getElementById('investmentList');
+  if(investments.length === 0){
+    list.innerHTML = '<div class="empty">No investments yet. Add one above to get started.</div>';
+  }else{
+    list.innerHTML = investments.map(inv=>{
+      const gain = inv.currentValue - inv.amountInvested;
+      const gainPct = inv.amountInvested ? (gain/inv.amountInvested)*100 : 0;
+      const gainClass = gain>=0?'positive':'negative';
+      const sched = schedules.find(s=>s.investmentId===inv.id && s.active);
+      const badge = sched ? `<span class="recur-badge">🔁 $${Math.round(sched.amount).toLocaleString()} ${freqLabel(sched.frequency).toLowerCase()}</span>` : '';
+      return `
+        <div class="investment-item">
+          <div>
+            <div class="investment-name">${escapeHtml(inv.name)} ${badge}</div>
+            <div class="investment-details">
+              <span>Invested $${Math.round(inv.amountInvested).toLocaleString()}</span>
+              <span>Current $${Math.round(inv.currentValue).toLocaleString()}</span>
+              <span class="${gainClass}">${gain>=0?'+':''}$${Math.round(gain).toLocaleString()} (${gainPct.toFixed(1)}%)</span>
+            </div>
+          </div>
+          <div class="investment-actions">
+            <button class="btn-small" onclick="editInvestment(${JSON.stringify(inv.id)})">Edit</button>
+            <button class="btn-small" style="color:var(--negative);" onclick="deleteInvestment(${JSON.stringify(inv.id)})">Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // upcoming
+  const upcoming = schedules
+    .filter(s=>s.active)
+    .slice()
+    .sort((a,b)=> a.nextDue.localeCompare(b.nextDue))
+    .slice(0,6);
+  const upcomingWrap = document.getElementById('upcomingList');
+  if(upcoming.length === 0){
+    upcomingWrap.innerHTML = '<div class="empty">No active recurring contributions.</div>';
+  }else{
+    const today = todayISO();
+    upcomingWrap.innerHTML = upcoming.map(s=>{
+      const inv = investments.find(i=>i.id===s.investmentId);
+      const dueNow = s.nextDue <= today;
+      const label = dueNow ? 'Due' : formatShortDate(s.nextDue);
+      return `
+        <div class="upcoming-item">
+          <span class="upcoming-when ${dueNow?'due-now':''}">${label}</span>
+          <span class="upcoming-name">${escapeHtml(inv ? inv.name : 'Unknown')}<br><span class="upcoming-freq">${freqLabel(s.frequency)}</span></span>
+          <span class="upcoming-amt">$${Math.round(s.amount).toLocaleString()}</span>
+        </div>`;
+    }).join('');
+  }
+
+  // schedules manage list
+  const schedWrap = document.getElementById('scheduleList');
+  if(schedules.length === 0){
+    schedWrap.innerHTML = '<div class="empty">No recurring contributions set up.</div>';
+  }else{
+    schedWrap.innerHTML = schedules.map(s=>{
+      const inv = investments.find(i=>i.id===s.investmentId);
+      return `
+        <div class="schedule-row ${s.active?'':'paused'}">
+          <div class="schedule-meta">
+            <div>${escapeHtml(inv ? inv.name : 'Deleted investment')}</div>
+            <div class="m">$${Math.round(s.amount).toLocaleString()} · ${freqLabel(s.frequency)} · next ${formatShortDate(s.nextDue)}</div>
+          </div>
+          <div class="investment-actions">
+            <button class="btn-small" onclick="toggleSchedule(${JSON.stringify(s.id)})">${s.active?'Pause':'Resume'}</button>
+            <button class="btn-small" style="color:var(--negative);" onclick="deleteSchedule(${JSON.stringify(s.id)})">Remove</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // history
+  const histWrap = document.getElementById('historyWrap');
+  if(history.length === 0){
+    histWrap.innerHTML = '<div class="empty">No payments logged yet.</div>';
+  }else{
+    const rows = history.slice(0,25).map(h=>{
+      const inv = investments.find(i=>i.id===h.investmentId);
+      return `<tr>
+        <td>${formatShortDate(h.date)}</td>
+        <td>${escapeHtml(inv ? inv.name : '—')}</td>
+        <td>$${Math.round(h.amount).toLocaleString()}</td>
+        <td><span class="tag ${h.type}">${h.type === 'recurring' ? 'Recurring' : 'Manual'}</span></td>
+      </tr>`;
+    }).join('');
+    histWrap.innerHTML = `<table class="history-table">
+      <thead><tr><th>Date</th><th>Investment</th><th>Amount</th><th>Type</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+}
+
+function formatShortDate(iso){
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString(undefined,{month:'short', day:'numeric'});
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ---------- Init ---------- */
+async function init(){
+  document.getElementById('recurStart').value = todayISO();
+  await loadData();
+  updateStatusUI();
+  await processDueSchedules();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
